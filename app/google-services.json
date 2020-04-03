@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "833244396047",
+    "firebase_url": "https://rougetwo-cff49.firebaseio.com",
+    "project_id": "rougetwo-cff49",
+    "storage_bucket": "rougetwo-cff49.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:833244396047:android:5e821fbfe66ee40608017a",
+        "android_client_info": {
+          "package_name": "aravind.com.rougetwo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "833244396047-kulesmp7qq7cc8b3l9dd1igsd8fcvmo0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "aravind.com.rougetwo",
+            "certificate_hash": "d5c1d38786f5046beae62383ad3fc2fdfe3268b2"
+          }
+        },
+        {
+          "client_id": "833244396047-6c4op14aghd40n31730vv1tuce4r6v9g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCiWtQqefM_vTlgR-XMZBtFPhbOAKJMaaI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "833244396047-6c4op14aghd40n31730vv1tuce4r6v9g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
