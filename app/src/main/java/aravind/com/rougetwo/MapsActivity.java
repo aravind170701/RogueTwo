@@ -21,11 +21,13 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentActivity;
 import aravind.com.constants.ErrorConstants;
+import aravind.com.constants.FireBaseConstants;
 import aravind.com.util.HeatMapUtility;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, OnSuccessListener<Location>, ValueEventListener {
@@ -68,7 +70,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void addMarker(LatLng coordinate, String title) {
         mMap.addMarker(new MarkerOptions().position(coordinate).title(title));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(coordinate, 14));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(coordinate, 6));
     }
 
     public void addHeatMap() {
@@ -84,16 +86,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onSuccess(Location location) {
         // Got last known location. In some rare situations this can be null.
         if (location != null) {
-            lastKnownLocation = location;
-            /*Take the data from the OnDataChange Listener*/
-            dat = FirebaseDatabase.getInstance().getReference();
-            dat.addListenerForSingleValueEvent(this);
+            coordinates = getListFromIntent();
+            if (!HeatMapUtility.isNullOrEmpty(coordinates)) {
 
-            //add marker at last known location
-            addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
+                addHeatMap();
+
+                //add marker at last known location
+                addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
+            } else {
+                lastKnownLocation = location;
+
+                /*Take the data from the OnDataChange Listener*/
+                dat = FirebaseDatabase.getInstance().getReference();
+                dat.addListenerForSingleValueEvent(this);
+
+                //add marker at last known location
+                addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
+            }
         } else {
             Toast.makeText(MapsActivity.this, ErrorConstants.ERROR_LAST_LOCATION_MSG, Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private ArrayList<LatLng> getListFromIntent() {
+        if (getIntent().getExtras() != null) {
+            return (ArrayList<LatLng>) getIntent().getExtras().get(FireBaseConstants.FIREBASE_DATA);
+        }
+        return null;
     }
 
     @Override
