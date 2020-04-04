@@ -1,10 +1,9 @@
 package aravind.com.util;
 
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.TileOverlayOptions;
-import com.google.firebase.database.DataSnapshot;
+import android.util.Log;
 
-import org.json.JSONException;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.firebase.database.DataSnapshot;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,11 +17,13 @@ public class HeatMapUtility {
         double latitude;
         double longitude;
         if (childrenSnapShot != null) {
+            Log.i("INFO", "Count: " + childrenSnapShot.getChildrenCount());
             for (DataSnapshot firstLevelChildSnapShot : childrenSnapShot.getChildren()) {
                 if (firstLevelChildSnapShot != null) {
+                    Log.i("INFO", "Children Count: " + firstLevelChildSnapShot.getChildrenCount());
                     for (DataSnapshot secondLevelSnapShot : firstLevelChildSnapShot.getChildren()) {
-                        latitude = (double) secondLevelSnapShot.child(FireBaseConstants.FIREBASE_KEY_LATITUDE).getValue();
-                        longitude = (double) secondLevelSnapShot.child(FireBaseConstants.FIREBASE_KEY_LONGITUDE).getValue();
+                        latitude = Double.parseDouble((String) secondLevelSnapShot.child(FireBaseConstants.FIREBASE_KEY_LATITUDE).getValue());
+                        longitude = Double.parseDouble((String) secondLevelSnapShot.child(FireBaseConstants.FIREBASE_KEY_LONGITUDE).getValue());
 
                         LatLng coordinates = new LatLng(latitude, longitude);
                         latLongList.add(coordinates);

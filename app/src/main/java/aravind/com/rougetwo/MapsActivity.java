@@ -1,16 +1,8 @@
 package aravind.com.rougetwo;
 
-import androidx.annotation.NonNull;
-import androidx.fragment.app.FragmentActivity;
-import aravind.com.util.HeatMapUtility;
-
-import android.content.Intent;
-import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
-import android.widget.Button;
+import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -20,7 +12,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.DataSnapshot;
@@ -28,18 +19,22 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.google.maps.android.heatmaps.Gradient;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+import androidx.annotation.NonNull;
+import androidx.fragment.app.FragmentActivity;
+import aravind.com.constants.ErrorConstants;
+import aravind.com.util.HeatMapUtility;
+
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, OnSuccessListener<Location>, ValueEventListener {
 
     public GoogleMap mMap;
     public DatabaseReference dat;
     public List<LatLng> coordinates;
     private FusedLocationProviderClient fusedLocationClient;
+    private Location lastKnownLocation;
 
 
     @Override
@@ -47,6 +42,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(MapsActivity.this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
@@ -65,41 +61,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(MapsActivity.this);
-        fusedLocationClient.getLastLocation()
-                .addOnSuccessListener(this, new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        // Got last known location. In some rare situations this can be null.
-                        if (location != null) {
-
-                            /*Take the data from the OnDataChange Listener*/
-                            dat = FirebaseDatabase.getInstance().getReference();
-                            dat.addValueEventListener(new ValueEventListener() {
-                                @Override
-                                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                                    if (dataSnapshot != null) {
-                                        coordinates = HeatMapUtility.readItems(dataSnapshot);
-                                        for (LatLng item : coordinates) {
-                                            Log.i("COORDINATES", "Latitude: " + item.latitude);
-                                            Log.i("COORDINATES", "Longitude: " + item.longitude);
-                                        }
-
-                                        //Calling the HeatMap Method to plot the details
-                                        addHeatMap();
-                                    }
-                                }
-
-                                @Override
-                                public void onCancelled(@NonNull DatabaseError databaseError) {
-                                }
-                            });
-
-                            //add marker at last known location
-                            addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
-                        }
-                    }
-                });
+        if (lastKnownLocation == null) {
+            fusedLocationClient.getLastLocation().addOnSuccessListener(this);
+        }
     }
 
     private void addMarker(LatLng coordinate, String title) {
@@ -111,7 +75,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (!HeatMapUtility.isNullOrEmpty(coordinates)) {
             HeatmapTileProvider h = new HeatmapTileProvider.Builder().data(coordinates).build();
             mMap.addTileOverlay(new TileOverlayOptions().tileProvider(h));
+        } else {
+            Toast.makeText(MapsActivity.this, ErrorConstants.ERROR_HEATMAP_MSG, Toast.LENGTH_SHORT).show();
         }
+    }
+
+    @Override
+    public void onSuccess(Location location) {
+        // Got last known location. In some rare situations this can be null.
+        if (location != null) {
+            lastKnownLocation = location;
+            /*Take the data from the OnDataChange Listener*/
+            dat = FirebaseDatabase.getInstance().getReference();
+            dat.addListenerForSingleValueEvent(this);
+
+            //add marker at last known location
+            addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
+        } else {
+            Toast.makeText(MapsActivity.this, ErrorConstants.ERROR_LAST_LOCATION_MSG, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+
+        coordinates = HeatMapUtility.readItems(dataSnapshot);
+
+        //Calling the HeatMap Method to plot the details
+        addHeatMap();
+    }
+
+    @Override
+    public void onCancelled(@NonNull DatabaseError databaseError) {
+        Toast.makeText(MapsActivity.this, ErrorConstants.ERROR_FIREBASE_MSG, Toast.LENGTH_SHORT).show();
     }
 }
 
