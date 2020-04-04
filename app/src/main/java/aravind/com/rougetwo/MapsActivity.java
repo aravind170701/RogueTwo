@@ -1,34 +1,14 @@
 package aravind.com.rougetwo;
 
-import android.location.Location;
-import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.FragmentActivity;
-import aravind.com.util.HeatMapUtility;
-
 import android.Manifest;
-import android.content.Intent;
-import android.content.IntentSender;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
-import android.widget.Button;
 import android.widget.Toast;
 
-import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.gms.location.LocationSettingsResponse;
-import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -36,9 +16,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.TileOverlayOptions;
-import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -46,13 +24,11 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
 
-import java.security.Permission;
-import java.security.Permissions;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 import aravind.com.constants.ErrorConstants;
 import aravind.com.constants.FireBaseConstants;
@@ -65,6 +41,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public List<LatLng> coordinates;
     private FusedLocationProviderClient fusedLocationClient;
     private Location lastKnownLocation;
+    private boolean loactionPermissionDenied = true;
     private int locationRequestCode = 1000;
     private double wayLatitude = 0.0, wayLongitude = 0.0;
 
@@ -100,48 +77,47 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             case 1000: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    loactionPermissionDenied = false;
                     fusedLocationClient.getLastLocation().addOnSuccessListener(this);
                 } else {
                     Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show();
                     //point to default coordinates
-                    Location defaultLocation=getDefaultLocation();
-                    //addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
-
+                    dat = FirebaseDatabase.getInstance().getReference().child("default").child("0");
+                    dat.addListenerForSingleValueEvent(this);
                 }
                 break;
             }
         }
     }
 
-    private Location getDefaultLocation() {
-        dat = FirebaseDatabase.getInstance().getReference().child("default").child("0");
-        return null;
-    }
-
     @Override
     public void onSuccess(Location location) {
         // Got last known location. In some rare situations this can be null.
-        if (location != null) {
-            coordinates = getListFromIntent();
-            if (!HeatMapUtility.isNullOrEmpty(coordinates)) {
-
-                addHeatMap();
-
-                //add marker at last known location
-                addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
-            } else {
-                lastKnownLocation = location;
-
-                /*Take the data from the OnDataChange Listener*/
-                dat = FirebaseDatabase.getInstance().getReference();
-                dat.addListenerForSingleValueEvent(this);
-
-                //add marker at last known location
-                addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
-            }
-        } else {
+        if (location == null) {
             Toast.makeText(MapsActivity.this, ErrorConstants.ERROR_LAST_LOCATION_MSG, Toast.LENGTH_SHORT).show();
+            location = new Location(LocationManager.GPS_PROVIDER);
+            location.setLatitude(0.0);
+            location.setLongitude(0.0);
         }
+
+        coordinates = getListFromIntent();
+        if (!HeatMapUtility.isNullOrEmpty(coordinates)) {
+
+            addHeatMap();
+
+            //add marker at last known location
+            addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
+        } else {
+            lastKnownLocation = location;
+
+            /*Take the data from the OnDataChange Listener*/
+            dat = FirebaseDatabase.getInstance().getReference();
+            dat.addListenerForSingleValueEvent(this);
+
+            //add marker at last known location
+            addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
+        }
+
     }
 
     @Override
@@ -168,15 +144,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+        LatLng defaultCoordinates = null;
+        if (loactionPermissionDenied) {
+            double latitude = Double.parseDouble(dataSnapshot.child(FireBaseConstants.FIREBASE_KEY_LATITUDE).getValue().toString());
+            double longitude = Double.parseDouble(dataSnapshot.child(FireBaseConstants.FIREBASE_KEY_LONGITUDE).getValue().toString());
+            defaultCoordinates = new LatLng(latitude, longitude);
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultCoordinates, 6));
+            coordinates = HeatMapUtility.readItems(dataSnapshot);
+            addHeatMap();
+        } else {
+            coordinates = HeatMapUtility.readItems(dataSnapshot);
 
-        coordinates = HeatMapUtility.readItems(dataSnapshot);
-
-        //Calling the HeatMap Method to plot the details
-        addHeatMap();
+            //Calling the HeatMap Method to plot the details
+            addHeatMap();
+        }
     }
 
     @Override
     public void onCancelled(@NonNull DatabaseError databaseError) {
+        addMarker(new LatLng(0.0, 0.0), "User's Location");
         Toast.makeText(MapsActivity.this, ErrorConstants.ERROR_FIREBASE_MSG, Toast.LENGTH_SHORT).show();
     }
 }
