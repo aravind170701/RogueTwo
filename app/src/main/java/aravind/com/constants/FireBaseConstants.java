@@ -5,8 +5,7 @@ public class FireBaseConstants {
 
     }
 
-    public static final String FIREBASE_KEY_LATITUDE = "latitude";
-    public static final String FIREBASE_KEY_LONGITUDE = "longitude";
+    public static final String FIREBASE_KEY_LATITUDE = "lat";
+    public static final String FIREBASE_KEY_LONGITUDE = "lon";
     public static final String FIREBASE_KEY_REGION_CODE = "regionCode";
-
 }
