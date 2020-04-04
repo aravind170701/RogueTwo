@@ -41,13 +41,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public GoogleMap mMap;
     public DatabaseReference dat;
-    public List<LatLng> coordinates;
+    public ArrayList<LatLng> coordinates;
     private FusedLocationProviderClient fusedLocationClient;
     private Location lastKnownLocation;
     private boolean loactionPermissionDenied = true;
     private int locationRequestCode = 1000;
     private double wayLatitude = 0.0, wayLongitude = 0.0;
     FloatingActionButton floatbtn;
+    ArrayList<LatLng> hospitals=new ArrayList<>();
+    ArrayList<LatLng> heatmapCoordinate=new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,9 +68,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(coordinate, 6));
     }
 
-    public void addHeatMap() {
-        if (!HeatMapUtility.isNullOrEmpty(coordinates)) {
-            HeatmapTileProvider h = new HeatmapTileProvider.Builder().data(coordinates).build();
+    public void addHeatMap(ArrayList<LatLng> patients) {
+        if (!HeatMapUtility.isNullOrEmpty(patients)) {
+            HeatmapTileProvider h = new HeatmapTileProvider.Builder().data(patients).build();
             mMap.addTileOverlay(new TileOverlayOptions().tileProvider(h));
         } else {
             Toast.makeText(MapsActivity.this, ErrorConstants.ERROR_HEATMAP_MSG, Toast.LENGTH_SHORT).show();
@@ -108,7 +110,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         coordinates = getListFromIntent();
         if (!HeatMapUtility.isNullOrEmpty(coordinates)) {
 
-            addHeatMap();
+            addHeatMap(coordinates);
 
             //add marker at last known location
             addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
@@ -156,14 +158,42 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             defaultCoordinates = new LatLng(latitude, longitude);
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(defaultCoordinates, 6));
             coordinates = HeatMapUtility.readItems(dataSnapshot);
-            addHeatMap();
         } else {
             coordinates = HeatMapUtility.readItems(dataSnapshot);
 
             //Calling the HeatMap Method to plot the details
-            addHeatMap();
         }
     }
+    public double getDistance(LatLng LatLng1, LatLng LatLng2) {
+        double distance = 0;
+        Location locationA = new Location("A");
+        locationA.setLatitude(LatLng1.latitude);
+        locationA.setLongitude(LatLng1.longitude);
+        Location locationB = new Location("B");
+        locationB.setLatitude(LatLng2.latitude);
+        locationB.setLongitude(LatLng2.longitude);
+        distance = locationA.distanceTo(locationB);
+
+        return distance;
+    }
+    // finding patients nearby a hospital
+       void find_nearby_patients()
+       {
+           hospitals.add(new LatLng(19.2001465,72.9643634));
+           for(LatLng hospital:hospitals) {
+               addMarker(hospital,"");
+               for (LatLng coordinate : coordinates) {
+                   if (getDistance(hospital,coordinate)<5000)
+                   {
+                       heatmapCoordinate.add(coordinate);
+                   }
+               }
+               if(heatmapCoordinate.size()>100)
+               {
+                   addHeatMap(heatmapCoordinate);
+               }
+           }
+       }
 
     @Override
     public void onCancelled(@NonNull DatabaseError databaseError) {
