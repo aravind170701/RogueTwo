@@ -5,6 +5,8 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -17,6 +19,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -44,12 +47,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean loactionPermissionDenied = true;
     private int locationRequestCode = 1000;
     private double wayLatitude = 0.0, wayLongitude = 0.0;
+    FloatingActionButton floatbtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        floatbtn = findViewById(R.id.floatbtn);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(MapsActivity.this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -58,7 +63,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void addMarker(LatLng coordinate, String title) {
         mMap.addMarker(new MarkerOptions().position(coordinate).title(title));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(coordinate, 6));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(coordinate, 6));
     }
 
     public void addHeatMap() {
@@ -149,7 +154,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             double latitude = Double.parseDouble(dataSnapshot.child(FireBaseConstants.FIREBASE_KEY_LATITUDE).getValue().toString());
             double longitude = Double.parseDouble(dataSnapshot.child(FireBaseConstants.FIREBASE_KEY_LONGITUDE).getValue().toString());
             defaultCoordinates = new LatLng(latitude, longitude);
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultCoordinates, 6));
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(defaultCoordinates, 6));
             coordinates = HeatMapUtility.readItems(dataSnapshot);
             addHeatMap();
         } else {
@@ -164,5 +169,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onCancelled(@NonNull DatabaseError databaseError) {
         addMarker(new LatLng(0.0, 0.0), "User's Location");
         Toast.makeText(MapsActivity.this, ErrorConstants.ERROR_FIREBASE_MSG, Toast.LENGTH_SHORT).show();
+    }
+
+    public void getlatestlocation(View view) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                    locationRequestCode);
+
+        } else {
+            fusedLocationClient.getLastLocation().addOnSuccessListener(this);
+        }
     }
 }
