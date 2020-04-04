@@ -104,7 +104,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void addMarker(LatLng coordinate, String title) {
         mMap.addMarker(new MarkerOptions().position(coordinate).title(title));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(coordinate, 12));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(coordinate, 14));
     }
 
     public void addHeatMap() {
