@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import aravind.com.constants.ErrorConstants;
 import aravind.com.constants.FireBaseConstants;
 import aravind.com.util.HeatMapUtility;
+import aravind.com.util.HeatMapUtilty2;
 
 import android.content.Intent;
 import android.location.Location;
@@ -27,26 +28,31 @@ import java.util.ArrayList;
 public class SplashActivity extends AppCompatActivity implements ValueEventListener {
 
     private final int SPLASH_DISPLAY_LENGTH = 100;
-    public DatabaseReference dat;
+    public DatabaseReference dat1;
+    public DatabaseReference dat2;
     private ArrayList<LatLng> coordinates;
+    private ArrayList<LatLng> hospitals;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        dat = FirebaseDatabase.getInstance().getReference();
-        dat.addListenerForSingleValueEvent(this);
-    }
+        dat1 = FirebaseDatabase.getInstance().getReference();
+        dat1.addListenerForSingleValueEvent(this);
+}
 
     @Override
     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
         coordinates = HeatMapUtility.readItems(dataSnapshot);
+        hospitals= HeatMapUtilty2.readItems(dataSnapshot);
+
 
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 Intent mainIntent = new Intent(SplashActivity.this, MapsActivity.class);
-                mainIntent.putExtra(FireBaseConstants.FIREBASE_DATA, coordinates);
+              mainIntent.putExtra("patient",coordinates);
+              mainIntent.putExtra("hospitals",hospitals);
                 startActivity(mainIntent);
                 SplashActivity.this.finish();
             }
@@ -65,4 +71,5 @@ public class SplashActivity extends AppCompatActivity implements ValueEventListe
             }
         }, SPLASH_DISPLAY_LENGTH);
     }
+
 }

@@ -2,6 +2,7 @@ package aravind.com.rougetwo;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -25,7 +26,9 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.maps.android.heatmaps.Gradient;
 import com.google.maps.android.heatmaps.HeatmapTileProvider;
+import com.google.maps.android.heatmaps.WeightedLatLng;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +53,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     FloatingActionButton floatbtn;
     ArrayList<LatLng> hospitals=new ArrayList<>();
     ArrayList<LatLng> heatmapCoordinate=new ArrayList<>();
+    int[] colorDark = {
+            Color.rgb(102, 0, 0), // green
+            Color.rgb(255, 0, 0)    // red
+    };
 
+    float[] startPoints = {
+            0.2f, 1f
+    };
+    int[] colorLight = {
+            Color.rgb(255, 153, 153), // green
+            Color.rgb(0, 153, 0)    // red
+    };
+    ArrayList<WeightedLatLng> weighteHospitals=new ArrayList<>();
+    Gradient gradientDefault = new Gradient(colorLight, startPoints);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,12 +78,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
     }
-
+   void form_weighted_coordinates()
+   {
+       for(LatLng hospital:hospitals)
+       {
+           weighteHospitals.add(new WeightedLatLng(hospital));
+       }
+   }
     private void addMarker(LatLng coordinate, String title) {
         mMap.addMarker(new MarkerOptions().position(coordinate).title(title));
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(coordinate, 6));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(coordinate, 10));
     }
 
+     public void addHeatMap(ArrayList<LatLng> patients,Gradient g) {
+        if (!HeatMapUtility.isNullOrEmpty(patients)) {
+            form_weighted_coordinates();
+            HeatmapTileProvider h = new HeatmapTileProvider.Builder().data(patients).weightedData(weighteHospitals).gradient(g).build();
+
+            mMap.addTileOverlay(new TileOverlayOptions().tileProvider(h));
+        } else {
+            Toast.makeText(MapsActivity.this, ErrorConstants.ERROR_HEATMAP_MSG, Toast.LENGTH_SHORT).show();
+        }
+    }
     public void addHeatMap(ArrayList<LatLng> patients) {
         if (!HeatMapUtility.isNullOrEmpty(patients)) {
             HeatmapTileProvider h = new HeatmapTileProvider.Builder().data(patients).build();
@@ -76,7 +108,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Toast.makeText(MapsActivity.this, ErrorConstants.ERROR_HEATMAP_MSG, Toast.LENGTH_SHORT).show();
         }
     }
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -107,11 +138,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             location.setLongitude(0.0);
         }
 
-        coordinates = getListFromIntent();
+        getListFromIntent();
         if (!HeatMapUtility.isNullOrEmpty(coordinates)) {
-
-            addHeatMap(coordinates);
-
+           find_nearby_patients();
             //add marker at last known location
             addMarker(new LatLng(location.getLatitude(), location.getLongitude()), "User's Location");
         } else {
@@ -142,11 +171,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private ArrayList<LatLng> getListFromIntent() {
+    private void getListFromIntent() {
         if (getIntent().getExtras() != null) {
-            return (ArrayList<LatLng>) getIntent().getExtras().get(FireBaseConstants.FIREBASE_DATA);
+            coordinates=(ArrayList<LatLng>) getIntent().getExtras().get("patient");
+            hospitals=(ArrayList<LatLng>) getIntent().getExtras().get("hospitals");
         }
-        return null;
     }
 
     @Override
@@ -160,8 +189,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             coordinates = HeatMapUtility.readItems(dataSnapshot);
         } else {
             coordinates = HeatMapUtility.readItems(dataSnapshot);
-
-            //Calling the HeatMap Method to plot the details
         }
     }
     public double getDistance(LatLng LatLng1, LatLng LatLng2) {
@@ -178,22 +205,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
     // finding patients nearby a hospital
        void find_nearby_patients()
-       {
-           hospitals.add(new LatLng(19.2001465,72.9643634));
-           for(LatLng hospital:hospitals) {
-               addMarker(hospital,"");
-               for (LatLng coordinate : coordinates) {
-                   if (getDistance(hospital,coordinate)<5000)
-                   {
-                       heatmapCoordinate.add(coordinate);
-                   }
-               }
-               if(heatmapCoordinate.size()>100)
-               {
-                   addHeatMap(heatmapCoordinate);
-               }
-           }
-       }
+    {
+        hospitals.add(new LatLng(19.2001756,72.9664046));
+        for(LatLng hospital:hospitals) {
+            addMarker(hospital,"Hospital");
+            heatmapCoordinate.clear();
+            if(coordinates!=null) {
+                for (LatLng coordinate : coordinates) {
+                    if (getDistance(hospital, coordinate) < 5000) {
+                        heatmapCoordinate.add(coordinate);
+                    }
+                }
+                if (heatmapCoordinate.size() >= 120) {
+                    Gradient gradient1 = new Gradient(colorDark, startPoints);
+
+                    addHeatMap(heatmapCoordinate, gradient1);
+                } else {
+                    Gradient gradient2 = new Gradient(colorLight, startPoints);
+
+                    addHeatMap(heatmapCoordinate, gradient2);
+                }
+            }
+        }
+    }
 
     @Override
     public void onCancelled(@NonNull DatabaseError databaseError) {
